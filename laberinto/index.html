@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Laberinto</title>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="../libs/jquery.js"></script>
+
+    <script type="importmap">
+          { "imports": { "three":      "../libs/three.module.js" ,
+                         "gui":        "../libs/dat.gui.module.js" ,
+                         "trackball" : "../libs/TrackballControls.js"} }
+    </script>
+
+    <script type="module" src="./MyScene.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            /* Centramos exactamente el elemento */
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: white;
+            /* Color de la mira */
+            box-shadow: 0 0 2px black;
+            /* Borde para que se vea en fondos claros */
+        }
+
+        /* Línea horizontal */
+        #crosshair::before {
+            top: 9px;
+            left: 0;
+            width: 20px;
+            height: 2px;
+        }
+
+        /* Línea vertical */
+        #crosshair::after {
+            top: 0;
+            left: 9px;
+            width: 2px;
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Div which will hold the Output -->
+    <div id="WebGL-output">
+    </div>
+    <div id="crosshair"></div>
+</body>
+
+</html>
