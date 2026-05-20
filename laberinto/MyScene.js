@@ -13,6 +13,7 @@ import { Laberinto } from '../laberinto/Laberinto.js'
 import { GuitonOro } from '../guitonOro/GuitonOro.js'
 import { Omnillave } from '../omnillave/Omnillave.js'
 import { Nanotec } from '../nanotec/Nanotec.js'
+import { Puerta } from '../puerta/Puerta.js'
 
 
 
@@ -102,6 +103,10 @@ class MyScene extends THREE.Scene {
         this.add(this.nanotec);
         this.nanotec.position.set(-0.5, 0.15, -0.5);
 
+        this.puerta = new Puerta();
+        this.puerta.position.set(-13, 0, -13);
+        this.add(this.puerta);
+
 
         //Defensa 3 - Control del personaje desde el teclado
         this.raycaster = new THREE.Raycaster();
@@ -113,12 +118,21 @@ class MyScene extends THREE.Scene {
         this.pickups.push(this.guitonOro);
         this.pickups.push(this.omnillave);
         this.pickups.push(this.nanotec);
+        this.pickups.push(this.puerta);
 
         //Correccion defensa 3 - Descentrar mira para que no se superponga el centro de la pantalla con el objeto a recoger
         this.mouseClickDerecho = false;
         this.camaraRotacionY = 0; // Rotación horizontal (mirar izquierda/derecha)
         this.camaraRotacionX = 0; // Rotación vertical (mirar arriba/abajo)
         this.sensibilidadRaton = 0.003;
+
+        // Defensa 4 - Elevacion de clank 
+        this.tiempoVisionAerea = 0; // Temporizador para el salto de Clank
+        this.alturaNormal = 1.7;    // Tu altura normal al caminar
+        this.alturaSalto = 20.0;    // A cuántos metros subirá la cámara
+
+        // Defensa 4 - Vista aérea
+        this.tiempoVistaNanotec = 0;
     }
 
     createCamera() {
@@ -173,6 +187,13 @@ class MyScene extends THREE.Scene {
         // Eventos del teclado para movernos (estos se quedan igual)
         document.addEventListener('keydown', (event) => this.onKeyDown(event));
         document.addEventListener('keyup', (event) => this.onKeyUp(event));
+
+
+        // CÁMARA SUPERIOR (NANOTEC)
+        this.mapCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+        this.mapCamera.position.set(0, 30, 0); // Altura de 50 metros
+        this.mapCamera.lookAt(0, 0, 0); // Mirando al centro del laberinto
+        this.add(this.mapCamera);
     }
 
     // Método que detecta cuando PULSAMOS una tecla
@@ -240,7 +261,6 @@ class MyScene extends THREE.Scene {
             lightPower: 50.0,  // La potencia de esta fuente de luz se mide en lúmenes
             ambientIntensity: 0.5,
             axisOnOff: true,
-            vistaAerea: () => { this.setVistaSuperior(); },
         }
 
         // Se crea una sección para los controles de esta clase
@@ -260,9 +280,6 @@ class MyScene extends THREE.Scene {
         folder.add(this.guiControls, 'axisOnOff')
             .name('Mostrar ejes : ')
             .onChange((value) => this.setAxisVisible(value));
-
-        var folder = gui.addFolder('Cámaras y Visión');
-        folder.add(this.guiControls, 'vistaAerea').name('Vista Superior (Plano XZ)');
 
         return gui;
     }
@@ -340,56 +357,59 @@ class MyScene extends THREE.Scene {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-
-
-
-    setVistaSuperior() {
-
-        const centroX = 0;
-        const centroZ = 0;
-        const alturaVuelo = 40;
-
-        // Posicionamos la cámara arriba
-        this.camera.position.set(centroX, alturaVuelo, centroZ);
-        // Miramos hacia abajo (90 grados en el eje X)
-        this.camera.rotation.set(-Math.PI / 2, 0, 0);
-    }
-
-
     // Defensa 3 - Recogida de objetos
-    intentarRecogerObjeto() {
-        // 1. Calculamos las coordenadas del ratón en 2D de forma normalizada (-1 a +1)
+    intentarRecogerObjeto(event) {
         var raton = new THREE.Vector2();
         raton.x = (event.clientX / window.innerWidth) * 2 - 1;
         raton.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        // 2. Disparamos el rayo láser desde la cámara pero cruzando el punto de la pantalla donde está el ratón
         this.raycaster.setFromCamera(raton, this.camera);
-
-        // 3. Comprobamos colisiones recursivamente (true) contra nuestros pickups
         var colisiones = this.raycaster.intersectObjects(this.pickups, true);
 
         if (colisiones.length > 0) {
             var distancia = colisiones[0].distance;
 
-            // Si el objeto está a menos de 4 metros, lo cogemos
-            if (distancia < 2.0) {
+            if (distancia < 4.0) {
                 var mallaTocada = colisiones[0].object;
-
-                // Buscamos la raíz jerárquica del objeto (Clank, Llave, etc.)
                 var pickupRaiz = mallaTocada;
+
                 while (pickupRaiz.parent && !this.pickups.includes(pickupRaiz)) {
                     pickupRaiz = pickupRaiz.parent;
                 }
 
                 if (this.pickups.includes(pickupRaiz)) {
-                    // 1. Lo borramos de la escena visualmente
-                    this.remove(pickupRaiz);
 
-                    // 2. Lo borramos de nuestra lista de colisiones/pickups
-                    this.pickups = this.pickups.filter(p => p !== pickupRaiz);
+                    // NUEVA LÓGICA DE DECISIÓN
+                    if (pickupRaiz === this.puerta) {
+                        // Es la puerta. Comprobamos si quedan objetos en el array.
+                        // Como la puerta misma está en el array, si la longitud es 1, 
+                        // significa que SOLO queda la puerta (has cogido todo lo demás).
+                        if (this.pickups.length === 1) {
+                            console.log("¡Tienes todo! Abriendo la puerta...");
+                            this.puerta.abrir();
+                        } else {
+                            // Faltan objetos, puedes mostrar un mensaje en consola o alerta
+                            console.log("La puerta está cerrada. Aún te faltan " + (this.pickups.length - 1) + " objetos.");
+                        }
+                    } else {
+                        // Es un objeto normal (Omnillave, Clank, etc.)
+                        this.remove(pickupRaiz);
+                        this.pickups = this.pickups.filter(p => p !== pickupRaiz);
+                        console.log("¡Objeto recogido! Te faltan: " + (this.pickups.length - 1));
 
-                    console.log("¡Objeto recogido! Faltan: " + this.pickups.length);
+                        // D4 - EFECTO CLANK (Helipack)
+                        // Comprobamos si el objeto recién recogido es alguno de los Clanks
+                        if (pickupRaiz === this.clank || pickupRaiz === this.clank2) {
+                            console.log("¡Helipack activado! Visión táctica aérea...");
+                            this.tiempoVisionAerea = 5.0; // 5 segundos en el aire
+                        }
+
+                        // D4 -EFECTO NANOTEC (Cambio de Cámara)
+                        else if (pickupRaiz === this.nanotec) {
+                            console.log("¡Nanotec recogido! Vista superior por 5 segundos.");
+                            this.tiempoVistaNanotec = 5.0; // 5 segundos
+                        }
+                    }
                 }
             }
         }
@@ -397,6 +417,17 @@ class MyScene extends THREE.Scene {
 
     update() {
         const delta = this.clock.getDelta();
+
+        // DEFENSA 4 - EFECTO HELIPACK DE CLANK
+        if (this.tiempoVisionAerea > 0) {
+            // Descontamos el tiempo que ha pasado
+            this.tiempoVisionAerea -= delta;
+            // Subimos la cámara suavemente hacia la altura de salto
+            this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, this.alturaSalto, delta * 4);
+        } else {
+            // Si el tiempo se ha acabado, devolvemos la cámara suavemente a la altura normal
+            this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, this.alturaNormal, delta * 4);
+        }
 
         // --- MOVIMIENTO MANUAL USANDO VECTORES 
         // 1. Obtenemos el vector que indica hacia dónde mira la cámara (Frente)
@@ -455,11 +486,23 @@ class MyScene extends THREE.Scene {
             }
         }
 
-        // Renderizado y actualizaciones finales
-        this.renderer.render(this, this.getCamera());
+        // D4 - EFECTO NANOTEC (Cambio de Cámara)
+        // Definimos qué cámara usaremos para el render final
+        let camaraParaRender = this.camera;
+
+        if (this.tiempoVistaNanotec > 0) {
+            this.tiempoVistaNanotec -= delta;
+            camaraParaRender = this.mapCamera; // Usamos la del cielo
+        }
+
+        // 4. RENDERIZADO ÚNICO
+        this.renderer.render(this, camaraParaRender);
+
+        // 5. ACTUALIZACIONES FINALES
         this.clank.update();
         if (this.clank2) this.clank2.update();
         if (this.nanotec) this.nanotec.update();
+        if (this.puerta) this.puerta.update();
 
         requestAnimationFrame(() => this.update());
     }
