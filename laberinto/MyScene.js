@@ -31,6 +31,42 @@ class MyScene extends THREE.Scene {
         // Lo primero, crear el visualizador, pasándole el lienzo sobre el que realizar los renderizados.
         this.renderer = this.createRenderer(myCanvas);
 
+
+
+
+        // ===============================
+        // FONDO ESPACIAL
+        // ===============================
+
+        // Cargamos la textura del espacio
+        const texturaEspacio = new THREE.TextureLoader().load('../imgs/espacio.jpeg');
+
+        // Repetir la textura como un mosaico
+        texturaEspacio.wrapS = THREE.RepeatWrapping;
+        texturaEspacio.wrapT = THREE.RepeatWrapping;
+        texturaEspacio.repeat.set(6, 6);
+
+        // Creamos una esfera gigante que rodea toda la escena
+        const geometriaEspacio = new THREE.SphereGeometry(400, 64, 64);
+
+        // Material con la textura espacial
+        const materialEspacio = new THREE.MeshBasicMaterial({
+            map: texturaEspacio,
+            // La textura se verá desde dentro de la esfera
+            side: THREE.BackSide
+        });
+
+        // Creamos el skybox espacial
+        const espacio = new THREE.Mesh(geometriaEspacio, materialEspacio);
+
+        // Lo añadimos a la escena
+        this.add(espacio);
+
+
+
+
+
+
         // Se crea la interfaz gráfica de usuario
         this.gui = this.createGUI();
 
@@ -323,7 +359,7 @@ class MyScene extends THREE.Scene {
         var renderer = new THREE.WebGLRenderer();
 
         // Se establece un color de fondo en las imágenes que genera el render
-        renderer.setClearColor(new THREE.Color(0xEEEEEE), 1.0);
+        //renderer.setClearColor(new THREE.Color(0xEEEEEE), 1.0);
 
         // Se establece el tamaño, se aprovecha la totalidad de la ventana del navegador
         renderer.setSize(window.innerWidth, window.innerHeight);
