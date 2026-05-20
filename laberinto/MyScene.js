@@ -14,8 +14,6 @@ import { GuitonOro } from '../guitonOro/GuitonOro.js'
 import { Omnillave } from '../omnillave/Omnillave.js'
 import { Nanotec } from '../nanotec/Nanotec.js'
 
-//Defensa 3 - Control del personaje desde el teclado
-import { PointerLockControls } from '../../libs/PointerLockControls.js';
 
 
 /// La clase fachada del modelo
@@ -115,35 +113,64 @@ class MyScene extends THREE.Scene {
         this.pickups.push(this.guitonOro);
         this.pickups.push(this.omnillave);
         this.pickups.push(this.nanotec);
+
+        //Correccion defensa 3 - Descentrar mira para que no se superponga el centro de la pantalla con el objeto a recoger
+        this.mouseClickDerecho = false;
+        this.camaraRotacionY = 0; // Rotación horizontal (mirar izquierda/derecha)
+        this.camaraRotacionX = 0; // Rotación vertical (mirar arriba/abajo)
+        this.sensibilidadRaton = 0.003;
     }
 
     createCamera() {
-        // Para crear una cámara le indicamos
-        //   El ángulo del campo de visión vértical en grados sexagesimales
-        //   La razón de aspecto ancho/alto
-        //   Los planos de recorte cercano y lejano
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 500);
-        // Colocamos la cámara a MI altura de los ojos 
-        this.camera.position.set(0, 1.7, 0);
+        this.camera.position.set(2, 1.7, 0);
         this.add(this.camera);
 
-        // INICIALIZAMOS POINTER LOCK CONTROLS
-        this.cameraControl = new PointerLockControls(this.camera, document.body);
-        this.cameraControl.enabled = true;
+        // Inicializamos los ángulos con la orientación actual de la cámara
+        this.camaraRotacionY = this.camera.rotation.y;
+        this.camaraRotacionX = this.camera.rotation.x;
 
-        // Evento para Bloquear el ratón (Entrar al juego) al hacer clic en la pantalla
-        document.body.addEventListener('click', () => {
-            this.cameraControl.lock();
-        });
-
+        // 1. Detectar cuando se pulsa un botón del ratón
         document.body.addEventListener('mousedown', (event) => {
-            // Solo recogemos si el juego está activo (ratón bloqueado) y pulsamos clic izquierdo
-            if (this.cameraControl.isLocked && event.button === 0) {
-                this.intentarRecogerObjeto();
+            if (event.button === 2) { // Clic DERECHO para girar la cabeza
+                this.mouseClickDerecho = true;
+            }
+            if (event.button === 0) { // Clic IZQUIERDO para coger objetos
+                // Le pasamos el evento completo para saber las coordenadas del ratón
+                this.intentarRecogerObjeto(event);
             }
         });
 
-        // Eventos del teclado para movernos
+        // 2. Detectar cuando se suelta el botón del ratón
+        document.body.addEventListener('mouseup', (event) => {
+            if (event.button === 2) {
+                this.mouseClickDerecho = false;
+            }
+        });
+
+        // 3. Desactivar el menú contextual que sale en el navegador al hacer clic derecho
+        document.body.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+        });
+
+        // 4. Mover el ratón (Girar la cámara solo si el botón derecho está pulsado)
+        document.body.addEventListener('mousemove', (event) => {
+            if (this.mouseClickDerecho) {
+                // event.movementX y movementY nos dan los píxeles que se ha movido el ratón desde el último frame
+                this.camaraRotacionY -= event.movementX * this.sensibilidadRaton;
+                this.camaraRotacionX -= event.movementY * this.sensibilidadRaton;
+
+                // Limitamos la rotación vertical para que no pueda dar la vuelta completa (mirar atrás por arriba)
+                this.camaraRotacionX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.camaraRotacionX));
+
+                // Aplicamos las rotaciones a la cámara de forma manual en el orden correcto
+                this.camera.rotation.order = 'YXZ';
+                this.camera.rotation.y = this.camaraRotacionY;
+                this.camera.rotation.x = this.camaraRotacionX;
+            }
+        });
+
+        // Eventos del teclado para movernos (estos se quedan igual)
         document.addEventListener('keydown', (event) => this.onKeyDown(event));
         document.addEventListener('keyup', (event) => this.onKeyUp(event));
     }
@@ -317,7 +344,6 @@ class MyScene extends THREE.Scene {
 
 
     setVistaSuperior() {
-        this.cameraControl.unlock();
 
         const centroX = 0;
         const centroZ = 0;
@@ -332,20 +358,25 @@ class MyScene extends THREE.Scene {
 
     // Defensa 3 - Recogida de objetos
     intentarRecogerObjeto() {
-        // Lanzamos el rayo desde el centro exacto de la pantalla (0, 0)
-        this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+        // 1. Calculamos las coordenadas del ratón en 2D de forma normalizada (-1 a +1)
+        var raton = new THREE.Vector2();
+        raton.x = (event.clientX / window.innerWidth) * 2 - 1;
+        raton.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        // Comprobamos si el rayo golpea algún objeto de nuestra lista "pickups"
+        // 2. Disparamos el rayo láser desde la cámara pero cruzando el punto de la pantalla donde está el ratón
+        this.raycaster.setFromCamera(raton, this.camera);
+
+        // 3. Comprobamos colisiones recursivamente (true) contra nuestros pickups
         var colisiones = this.raycaster.intersectObjects(this.pickups, true);
 
         if (colisiones.length > 0) {
             var distancia = colisiones[0].distance;
 
             // Si el objeto está a menos de 4 metros, lo cogemos
-            if (distancia < 4.0) {
+            if (distancia < 2.0) {
                 var mallaTocada = colisiones[0].object;
 
-                // Como hemos tocado una malla (ej: un brazo), tenemos que buscar su objeto Padre Raíz (Clank entero)
+                // Buscamos la raíz jerárquica del objeto (Clank, Llave, etc.)
                 var pickupRaiz = mallaTocada;
                 while (pickupRaiz.parent && !this.pickups.includes(pickupRaiz)) {
                     pickupRaiz = pickupRaiz.parent;
@@ -355,87 +386,80 @@ class MyScene extends THREE.Scene {
                     // 1. Lo borramos de la escena visualmente
                     this.remove(pickupRaiz);
 
-                    // 2. Lo borramos de nuestra lista lógica
+                    // 2. Lo borramos de nuestra lista de colisiones/pickups
                     this.pickups = this.pickups.filter(p => p !== pickupRaiz);
 
-                    console.log("¡Objeto recogido! Te faltan: " + this.pickups.length);
+                    console.log("¡Objeto recogido! Faltan: " + this.pickups.length);
                 }
             }
         }
     }
 
-
-
-
-    // Para caminar sin chocar con las paredes, lo que haremos es lanzar un rayo desde 
-    // la posición de la cámara hacia la dirección en la que se quiere mover el personaje, 
-    // y si ese rayo choca con una pared a menos de una distancia de seguridad, no se permitirá el movimiento en esa dirección.
     update() {
         const delta = this.clock.getDelta();
 
-        if (this.cameraControl.isLocked) {
-            // 1. Obtenemos el vector que indica hacia dónde mira la cámara (Frente)
-            var dirFrente = new THREE.Vector3();
-            this.camera.getWorldDirection(dirFrente);
-            dirFrente.y = 0; // Forzamos Y a 0 para que el rayo vaya paralelo al suelo (no al cielo)
-            dirFrente.normalize();
+        // --- MOVIMIENTO MANUAL USANDO VECTORES 
+        // 1. Obtenemos el vector que indica hacia dónde mira la cámara (Frente)
+        var dirFrente = new THREE.Vector3();
+        this.camera.getWorldDirection(dirFrente);
+        dirFrente.y = 0; // Forzamos Y a 0 para caminar a ras de suelo y no volar al mirar al cielo
+        dirFrente.normalize();
 
-            // 2. Calculamos el vector Derecha matemáticamente
-            var dirDerecha = new THREE.Vector3();
-            dirDerecha.crossVectors(dirFrente, this.camera.up).normalize();
+        // 2. Calculamos el vector Derecha matemáticamente
+        var dirDerecha = new THREE.Vector3();
+        dirDerecha.crossVectors(dirFrente, this.camera.up).normalize();
 
-            // 3. Variables de colisión
-            var paso = this.velocidadMovimiento * delta;
-            var distanciaChoque = 0.6;
+        // 3. Variables de colisión y velocidad
+        var paso = this.velocidadMovimiento * delta;
+        var distanciaChoque = 0.6;
 
-            // --- NUEVO: COMBINAMOS PAREDES Y PICK-UPS ---
-            var paredes = this.laberinto.children;
-            var objetosColisionables = paredes.concat(this.pickups);
+        var paredes = this.laberinto.children;
+        var objetosColisionables = paredes.concat(this.pickups);
 
-            // COMPROBAR ADELANTE (W)
-            if (this.moveForward) {
-                this.raycaster.set(this.camera.position, dirFrente);
-                // IMPORTANTE: Ponemos 'true' al final para que detecte los brazos y piezas sueltas de Clank
-                var choques = this.raycaster.intersectObjects(objetosColisionables, true);
-                if (choques.length === 0 || choques[0].distance > distanciaChoque) {
-                    this.cameraControl.moveForward(paso);
-                }
-            }
-
-            // COMPROBAR ATRÁS (S)
-            if (this.moveBackward) {
-                var dirAtras = dirFrente.clone().negate();
-                this.raycaster.set(this.camera.position, dirAtras);
-                var choques = this.raycaster.intersectObjects(objetosColisionables, true);
-                if (choques.length === 0 || choques[0].distance > distanciaChoque) {
-                    this.cameraControl.moveForward(-paso);
-                }
-            }
-
-            // COMPROBAR IZQUIERDA (A)
-            if (this.moveLeft) {
-                var dirIzquierda = dirDerecha.clone().negate();
-                this.raycaster.set(this.camera.position, dirIzquierda);
-                var choques = this.raycaster.intersectObjects(objetosColisionables, true);
-                if (choques.length === 0 || choques[0].distance > distanciaChoque) {
-                    this.cameraControl.moveRight(-paso);
-                }
-            }
-
-            // COMPROBAR DERECHA (D)
-            if (this.moveRight) {
-                this.raycaster.set(this.camera.position, dirDerecha);
-                var choques = this.raycaster.intersectObjects(objetosColisionables, true);
-                if (choques.length === 0 || choques[0].distance > distanciaChoque) {
-                    this.cameraControl.moveRight(paso);
-                }
+        // COMPROBAR ADELANTE (W)
+        if (this.moveForward) {
+            this.raycaster.set(this.camera.position, dirFrente);
+            var choques = this.raycaster.intersectObjects(objetosColisionables, true);
+            if (choques.length === 0 || choques[0].distance > distanciaChoque) {
+                // En vez de moveForward(), sumamos el vector dirección escalado por el paso
+                this.camera.position.addScaledVector(dirFrente, paso);
             }
         }
 
+        // COMPROBAR ATRÁS (S)
+        if (this.moveBackward) {
+            var dirAtras = dirFrente.clone().negate();
+            this.raycaster.set(this.camera.position, dirAtras);
+            var choques = this.raycaster.intersectObjects(objetosColisionables, true);
+            if (choques.length === 0 || choques[0].distance > distanciaChoque) {
+                this.camera.position.addScaledVector(dirFrente, -paso);
+            }
+        }
+
+        // COMPROBAR IZQUIERDA (A)
+        if (this.moveLeft) {
+            var dirIzquierda = dirDerecha.clone().negate();
+            this.raycaster.set(this.camera.position, dirIzquierda);
+            var choques = this.raycaster.intersectObjects(objetosColisionables, true);
+            if (choques.length === 0 || choques[0].distance > distanciaChoque) {
+                this.camera.position.addScaledVector(dirDerecha, -paso);
+            }
+        }
+
+        // COMPROBAR DERECHA (D)
+        if (this.moveRight) {
+            this.raycaster.set(this.camera.position, dirDerecha);
+            var choques = this.raycaster.intersectObjects(objetosColisionables, true);
+            if (choques.length === 0 || choques[0].distance > distanciaChoque) {
+                this.camera.position.addScaledVector(dirDerecha, paso);
+            }
+        }
+
+        // Renderizado y actualizaciones finales
         this.renderer.render(this, this.getCamera());
         this.clank.update();
-        this.clank2.update();
-        this.nanotec.update();
+        if (this.clank2) this.clank2.update();
+        if (this.nanotec) this.nanotec.update();
 
         requestAnimationFrame(() => this.update());
     }
