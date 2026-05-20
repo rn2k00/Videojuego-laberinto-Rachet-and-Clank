@@ -169,6 +169,9 @@ class MyScene extends THREE.Scene {
 
         // Defensa 4 - Vista aérea
         this.tiempoVistaNanotec = 0;
+
+        // Defensa 4 - Luz dinámica del Guitón
+        this.guitonRecogido = false;
     }
 
     createCamera() {
@@ -338,6 +341,14 @@ class MyScene extends THREE.Scene {
         this.pointLight.position.set(2, 3, 1);
         console.log(this.pointLight);
         this.add(this.pointLight);
+
+        // D4 - LUZ DINÁMICA DE LA PUERTA 
+        // Inicialmente roja (0xff0000) indicando que la puerta no tiene energía
+        this.luzPuerta = new THREE.PointLight(0xff0000, 30, 15);
+        // La colocamos cerca de la puerta (tu puerta está en -13, 0, -13)
+        // La ponemos un poco por delante en Z y alta en Y
+        this.luzPuerta.position.set(-13, 2.5, -11);
+        this.add(this.luzPuerta);
     }
 
     setLightPower(valor) {
@@ -445,6 +456,14 @@ class MyScene extends THREE.Scene {
                             console.log("¡Nanotec recogido! Vista superior por 5 segundos.");
                             this.tiempoVistaNanotec = 5.0; // 5 segundos
                         }
+
+                        // D4 - EFECTO GUITÓN (Luz Dinámica)
+                        else if (pickupRaiz === this.guitonOro) {
+                            console.log("¡Guitón recogido! Energía de la puerta restaurada.");
+                            this.guitonRecogido = true;
+                            // Cambiamos el color de la luz a Dorado (0xffaa00)
+                            this.luzPuerta.color.setHex(0xffaa00);
+                        }
                     }
                 }
             }
@@ -529,6 +548,16 @@ class MyScene extends THREE.Scene {
         if (this.tiempoVistaNanotec > 0) {
             this.tiempoVistaNanotec -= delta;
             camaraParaRender = this.mapCamera; // Usamos la del cielo
+        }
+
+        // --- LÓGICA DE LA LUZ DINÁMICA ---
+        const tiempoLuz = Date.now() * 0.003;
+        if (this.guitonRecogido) {
+            // Palpita rápido en dorado (con mucha intensidad)
+            this.luzPuerta.intensity = 50 + Math.sin(tiempoLuz * 3) * 30;
+        } else {
+            // Palpita lento en rojo (con baja intensidad)
+            this.luzPuerta.intensity = 20 + Math.sin(tiempoLuz) * 10;
         }
 
         // 4. RENDERIZADO ÚNICO
