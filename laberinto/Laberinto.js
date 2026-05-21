@@ -7,12 +7,12 @@ class Laberinto extends THREE.Object3D {
         this.mapa = [
             [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // [0,1] es la Salida (S)
             [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],// Pick 1 - Zona alta derecha - [1,13]
-            [1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
-            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
-            [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1],
-            [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-            [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1], // Centro: Jugador [7,7]
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],// Pick 1 - Zona alta derecha - [1,13]
+            [1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],// Pick 1 - Zona alta derecha - [1,13]
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],// Pick 1 - Zona alta derecha - [1,13]
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],// Pick 1 - Zona alta derecha - [1,13]
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],// Pick 1 - Zona alta derecha - [1,13]
+            [1, 0, 0, 0, 1, 0, 0, /*Jugador y objetos*/0, 0, 0, 1, 0, 0, 0, 1], // Centro: Jugador [7,7]
             [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1],
             [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1], // Pick 2 - Zona media derecha - [9,13]
             [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
@@ -54,6 +54,7 @@ class Laberinto extends THREE.Object3D {
         // 1. Cargamos las texturas
         var textureLoader = new THREE.TextureLoader();
 
+        // DEFENSA 4 - TEXTIRAS CON RELIEVE FALSO PARA MEJORAR EL REALISMO DE LAS PAREDES
         // Textura base 
         var texturaColor = textureLoader.load('../imgs/pared11.png');
 

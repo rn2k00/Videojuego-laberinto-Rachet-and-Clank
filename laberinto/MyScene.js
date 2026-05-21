@@ -32,11 +32,7 @@ class MyScene extends THREE.Scene {
         this.renderer = this.createRenderer(myCanvas);
 
 
-
-
-        // ===============================
-        // FONDO ESPACIAL
-        // ===============================
+        // DEFENSA 4 - TEXTURA ESPACIAL PARA EL FONDO DEL CIELO
 
         // Cargamos la textura del espacio
         const texturaEspacio = new THREE.TextureLoader().load('../imgs/espacio.jpeg');
@@ -61,10 +57,7 @@ class MyScene extends THREE.Scene {
 
         // Lo añadimos a la escena
         this.add(espacio);
-
-
-
-
+        // --------------------------------------------------------------------
 
 
         // Se crea la interfaz gráfica de usuario
@@ -175,6 +168,8 @@ class MyScene extends THREE.Scene {
     }
 
     createCamera() {
+
+        // CORRECCION DEFENSA 3 - LIBERACION DEL PUNTERO DEL RATÓN PARA CONTROLAR LA CÁMARA CON EL BOTÓN DERECHO
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 500);
         this.camera.position.set(2, 1.7, 0);
         this.add(this.camera);
@@ -227,8 +222,8 @@ class MyScene extends THREE.Scene {
         document.addEventListener('keydown', (event) => this.onKeyDown(event));
         document.addEventListener('keyup', (event) => this.onKeyUp(event));
 
-
-        // CÁMARA SUPERIOR (NANOTEC)
+        // DEFENSA 4 - CÁMARA DE VISTA AÉREA (MAPA)- Creo una cámara adicional para la vista desde el cielo, q
+        // ue se activa al recoger la Nanotec
         this.mapCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
         this.mapCamera.position.set(0, 30, 0); // Altura de 50 metros
         this.mapCamera.lookAt(0, 0, 0); // Mirando al centro del laberinto
@@ -342,9 +337,9 @@ class MyScene extends THREE.Scene {
         console.log(this.pointLight);
         this.add(this.pointLight);
 
-        // D4 - LUZ DINÁMICA DE LA PUERTA 
+        // Defensa 4 - LUZ DINÁMICA DE LA PUERTA 
         // Inicialmente roja (0xff0000) indicando que la puerta no tiene energía
-        this.luzPuerta = new THREE.PointLight(0xff0000, 30, 15);
+        this.luzPuerta = new THREE.PointLight(0xff0000, 10, 10);
         // La colocamos cerca de la puerta (tu puerta está en -13, 0, -13)
         // La ponemos un poco por delante en Z y alta en Y
         this.luzPuerta.position.set(-13, 2.5, -11);
@@ -407,6 +402,9 @@ class MyScene extends THREE.Scene {
     // Defensa 3 - Recogida de objetos
     intentarRecogerObjeto(event) {
         var raton = new THREE.Vector2();
+
+        // CORRECCION DEFENSA 3 - RECOGIDA DE OBJETOS DESCENTRADOS - En vez de usar el centro de la pantalla,
+        //  usamos las coordenadas del ratón para lanzar el rayo
         raton.x = (event.clientX / window.innerWidth) * 2 - 1;
         raton.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -426,7 +424,6 @@ class MyScene extends THREE.Scene {
 
                 if (this.pickups.includes(pickupRaiz)) {
 
-                    // NUEVA LÓGICA DE DECISIÓN
                     if (pickupRaiz === this.puerta) {
                         // Es la puerta. Comprobamos si quedan objetos en el array.
                         // Como la puerta misma está en el array, si la longitud es 1, 
@@ -444,20 +441,20 @@ class MyScene extends THREE.Scene {
                         this.pickups = this.pickups.filter(p => p !== pickupRaiz);
                         console.log("¡Objeto recogido! Te faltan: " + (this.pickups.length - 1));
 
-                        // D4 - EFECTO CLANK (Helipack)
+                        // Defensa 4 - EFECTO CLANK (Helipack)
                         // Comprobamos si el objeto recién recogido es alguno de los Clanks
                         if (pickupRaiz === this.clank || pickupRaiz === this.clank2) {
                             console.log("¡Helipack activado! Visión táctica aérea...");
                             this.tiempoVisionAerea = 5.0; // 5 segundos en el aire
                         }
 
-                        // D4 -EFECTO NANOTEC (Cambio de Cámara)
+                        // Defensa 4 -EFECTO NANOTEC (Cambio de Cámara)
                         else if (pickupRaiz === this.nanotec) {
                             console.log("¡Nanotec recogido! Vista superior por 5 segundos.");
                             this.tiempoVistaNanotec = 5.0; // 5 segundos
                         }
 
-                        // D4 - EFECTO GUITÓN (Luz Dinámica)
+                        // Defensa 4 - EFECTO GUITÓN (Luz Dinámica)
                         else if (pickupRaiz === this.guitonOro) {
                             console.log("¡Guitón recogido! Energía de la puerta restaurada.");
                             this.guitonRecogido = true;
@@ -484,7 +481,7 @@ class MyScene extends THREE.Scene {
             this.camera.position.y = THREE.MathUtils.lerp(this.camera.position.y, this.alturaNormal, delta * 4);
         }
 
-        // --- MOVIMIENTO MANUAL USANDO VECTORES 
+        //MOVIMIENTO MANUAL USANDO VECTORES 
         // 1. Obtenemos el vector que indica hacia dónde mira la cámara (Frente)
         var dirFrente = new THREE.Vector3();
         this.camera.getWorldDirection(dirFrente);
@@ -500,6 +497,8 @@ class MyScene extends THREE.Scene {
         var distanciaChoque = 0.6;
 
         var paredes = this.laberinto.children;
+
+        // CORRECION DEFENSA 3 - Añadimos las pickups al array de objetos colisionables para que también se pueda chocar con ellos
         var objetosColisionables = paredes.concat(this.pickups);
 
         // COMPROBAR ADELANTE (W)
@@ -541,7 +540,7 @@ class MyScene extends THREE.Scene {
             }
         }
 
-        // D4 - EFECTO NANOTEC (Cambio de Cámara)
+        // Defensa 4 - EFECTO NANOTEC (Cambio de Cámara)
         // Definimos qué cámara usaremos para el render final
         let camaraParaRender = this.camera;
 
@@ -550,14 +549,14 @@ class MyScene extends THREE.Scene {
             camaraParaRender = this.mapCamera; // Usamos la del cielo
         }
 
-        // --- LÓGICA DE LA LUZ DINÁMICA ---
+        // Defensa 4 - LÓGICA DE LA LUZ DINÁMICA
         const tiempoLuz = Date.now() * 0.003;
         if (this.guitonRecogido) {
             // Palpita rápido en dorado (con mucha intensidad)
-            this.luzPuerta.intensity = 50 + Math.sin(tiempoLuz * 3) * 30;
+            this.luzPuerta.intensity = 70 + Math.sin(tiempoLuz * 3) * 30;
         } else {
             // Palpita lento en rojo (con baja intensidad)
-            this.luzPuerta.intensity = 20 + Math.sin(tiempoLuz) * 10;
+            this.luzPuerta.intensity = 10 + Math.sin(tiempoLuz) * 10;
         }
 
         // 4. RENDERIZADO ÚNICO
