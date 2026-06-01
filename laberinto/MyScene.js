@@ -111,26 +111,20 @@ class MyScene extends THREE.Scene {
         // 3. AÑADIMOS A CLANK y demas personajes
         this.clank = new Clank(this.gui, "Controles de Clank");
         this.add(this.clank);
-        this.clank.position.set(0.5, 0, 0.5);
+        this.clank.position.set(12, 0, -12);
 
-        this.clank2 = new Clank(this.gui, "Controles de Clank2");
-        this.add(this.clank2);
-        // Si vemos el mapa desde arriba seria en la mitad de[1,13], pero como el personaje se situa en el centro de su casilla, lo colocamos en [12, 0, -12] 
-        // (coordenadas del mundo) para que quede centrado en esa casilla
-        // Pick 1 - Zona alta derecha - [1,13]
-        this.clank2.position.set(12, 0, -12);
-
+        // Si colocamos Pick 2 - Zona media derecha - [9,13] la posición sería [8, 0, -12], pero lo colocamos en [9.5, 0, -12] para que quede centrado en la casilla
         this.guitonOro = new GuitonOro(this.gui, "Controles de GuitonOro");
         this.add(this.guitonOro);
-        this.guitonOro.position.set(0.5, 0, -0.5);
+        this.guitonOro.position.set(-12, 0, 0);
 
         this.omnillave = new Omnillave(this.gui, "Controles de Omnillave");
         this.add(this.omnillave);
-        this.omnillave.position.set(-0.5, 0, 0.5);
+        this.omnillave.position.set(-12, 0, 12);
 
         this.nanotec = new Nanotec(this.gui, "Controles de Nanotec");
         this.add(this.nanotec);
-        this.nanotec.position.set(-0.5, 0.15, -0.5);
+        this.nanotec.position.set(12, 0, 12);
 
         this.puerta = new Puerta();
         this.puerta.position.set(-13, 0, -13);
@@ -143,7 +137,6 @@ class MyScene extends THREE.Scene {
         //Defensa 3 - Recogida de objetos
         this.pickups = []; // Aquí guardaremos los objetos que se pueden coger
         this.pickups.push(this.clank);
-        this.pickups.push(this.clank2);
         this.pickups.push(this.guitonOro);
         this.pickups.push(this.omnillave);
         this.pickups.push(this.nanotec);
@@ -443,7 +436,7 @@ class MyScene extends THREE.Scene {
 
                         // Defensa 4 - EFECTO CLANK (Helipack)
                         // Comprobamos si el objeto recién recogido es alguno de los Clanks
-                        if (pickupRaiz === this.clank || pickupRaiz === this.clank2) {
+                        if (pickupRaiz === this.clank) {
                             console.log("¡Helipack activado! Visión táctica aérea...");
                             this.tiempoVisionAerea = 5.0; // 5 segundos en el aire
                         }
@@ -564,7 +557,6 @@ class MyScene extends THREE.Scene {
 
         // 5. ACTUALIZACIONES FINALES
         this.clank.update();
-        if (this.clank2) this.clank2.update();
         if (this.nanotec) this.nanotec.update();
         if (this.puerta) this.puerta.update();
 
